@@ -19,5 +19,6 @@ fn main() {
 
     let mesh = corner_table_from_vertices_and_indices(&vertices, &faces);
 
-    mesh.laplacian();
+    let laplace_dict = mesh.laplace_matrix();
+    let areas = mesh.mass_matrix();
 }

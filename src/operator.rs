@@ -9,13 +9,14 @@ use crate::utils::opposite_angle;
 pub trait Laplacian {
     type ScalarType: RealNumber;
 
-    fn laplacian(&self) -> HashMap<(usize, usize), Self::ScalarType>;
+    fn laplace_matrix(&self) -> HashMap<(usize, usize), Self::ScalarType>;
+    fn mass_matrix(&self) -> Vec<Self::ScalarType>;
 }
 
 impl<TScalar: RealNumber + std::convert::From<i8>> Laplacian for CornerTable<TScalar> {
     type ScalarType = TScalar;
 
-    fn laplacian(&self) -> HashMap<(usize, usize), Self::ScalarType> {
+    fn laplace_matrix(&self) -> HashMap<(usize, usize), Self::ScalarType> {
         // TODO: expand for Mesh + TopologicalMesh
         let mut sums = HashMap::new();
 
@@ -65,5 +66,16 @@ impl<TScalar: RealNumber + std::convert::From<i8>> Laplacian for CornerTable<TSc
         }
 
         sums
+    }
+
+    fn mass_matrix(&self) -> Vec<Self::ScalarType> {
+        let mut areas = Vec::new();
+
+        for vertex in self.vertices() {
+            let mut area = Into::<Self::ScalarType>::into(0);
+            self.faces_around_vertex(&vertex, |face| area += self.face_positions(face).get_area());
+            areas.push(area / Into::<Self::ScalarType>::into(3))
+        }
+        areas
     }
 }
