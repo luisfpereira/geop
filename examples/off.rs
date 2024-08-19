@@ -2,8 +2,9 @@
 
 extern crate geop;
 
+use geop::corner_table_from_vertices_and_indices;
 use geop::io::OffReader;
-use geop::{corner_table_from_vertices_and_indices, mesh_laplacian};
+use geop::operator::Laplacian;
 
 fn main() {
     println!("Running...");
@@ -18,5 +19,5 @@ fn main() {
 
     let mesh = corner_table_from_vertices_and_indices(&vertices, &faces);
 
-    mesh_laplacian(mesh);
+    mesh.laplacian();
 }
