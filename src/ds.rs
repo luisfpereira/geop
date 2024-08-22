@@ -6,6 +6,8 @@ use lox::core::BasicAdj;
 use lox::map::PropStoreMut;
 use lox::FaceHandle;
 use lox::{
+    core::DirectedEdgeMesh as TopologicalDirectedEdgeMesh,
+    core::SharedVertexMesh as TopologicalSharedVertexMesh,
     core::{HalfEdgeMesh as TopologicalHalfEdgeMesh, MeshMut},
     map::DenseMap,
     prelude::Empty,
@@ -20,15 +22,27 @@ pub struct SharedVertexMeshData<ScalarType: RealNumber> {
     pub faces: Vec<usize>,
 }
 
-// TODO: can be made much more general
-pub struct HalfEdgeMesh {
-    pub topology: TopologicalHalfEdgeMesh,
+pub struct AbstractMesh<Topology> {
+    pub topology: Topology,
     pub vertex_positions: DenseMap<VertexHandle, [f64; 3]>,
 }
 
-// TODO: needs to be brough in as trait, get inspired by baby shark
-impl HalfEdgeMesh {
-    pub fn face_polygon(&self, face: FaceHandle) -> Triangle3<f64> {
+pub type HalfEdgeMesh = AbstractMesh<TopologicalHalfEdgeMesh>;
+pub type DirectedEdgeMesh = AbstractMesh<TopologicalDirectedEdgeMesh>;
+pub type SharedVertexMesh = AbstractMesh<TopologicalSharedVertexMesh>;
+
+// // TODO: can be made much more general
+// pub struct HalfEdgeMesh {
+//     pub topology: TopologicalHalfEdgeMesh,
+//     pub vertex_positions: DenseMap<VertexHandle, [f64; 3]>,
+// }
+
+pub trait VertexPos {
+    fn face_polygon(&self, face: FaceHandle) -> Triangle3<f64>;
+}
+
+impl<Topology: BasicAdj> VertexPos for AbstractMesh<Topology> {
+    fn face_polygon(&self, face: FaceHandle) -> Triangle3<f64> {
         let vertex_positions: Vec<[f64; 3]> = self
             .topology
             .vertices_around_face(face) // TODO: use .vertices_around_triangle
@@ -45,32 +59,32 @@ impl HalfEdgeMesh {
 }
 
 pub trait FromSharedVertex {
-    type TMesh;
     type ScalarType;
 
-    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh;
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self;
 }
 
 impl<TScalar: RealNumber> FromSharedVertex for CornerTable<TScalar> {
     type ScalarType = TScalar;
-    type TMesh = CornerTable<TScalar>;
 
-    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh {
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self {
         let new_vertices: Vec<Vector3<Self::ScalarType>> = vertices
             .array_chunks::<3>()
             .map(|&pos| Vector3::new(pos[0], pos[1], pos[2]))
             .collect();
 
-        CornerTable::<Self::ScalarType>::from_vertices_and_indices(&new_vertices, faces)
+        Self::from_vertices_and_indices(&new_vertices, faces)
     }
 }
 
-impl FromSharedVertex for HalfEdgeMesh {
+impl<Topology> FromSharedVertex for AbstractMesh<Topology>
+where
+    Topology: Empty + MeshMut,
+{
     type ScalarType = f64;
-    type TMesh = HalfEdgeMesh;
 
-    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh {
-        let mut top_mesh = <TopologicalHalfEdgeMesh>::empty();
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self {
+        let mut top_mesh = <Topology>::empty();
 
         let mut vertex_positions = DenseMap::new();
         let mut vertices_ = Vec::new();
@@ -84,14 +98,17 @@ impl FromSharedVertex for HalfEdgeMesh {
             top_mesh.add_triangle([vertices_[pos[0]], vertices_[pos[1]], vertices_[pos[2]]]);
         });
 
-        HalfEdgeMesh {
+        Self {
             topology: top_mesh,
             vertex_positions,
         }
     }
 }
 
-impl From<SharedVertexMeshData<f64>> for HalfEdgeMesh {
+impl<Topology> From<SharedVertexMeshData<f64>> for AbstractMesh<Topology>
+where
+    Topology: Empty + MeshMut,
+{
     fn from(mesh: SharedVertexMeshData<f64>) -> Self {
         Self::from_vertices_and_faces(&mesh.vertices, &mesh.faces)
     }

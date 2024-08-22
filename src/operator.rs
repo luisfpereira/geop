@@ -1,4 +1,4 @@
-use crate::ds::HalfEdgeMesh;
+use crate::ds::{AbstractMesh, VertexPos};
 use crate::utils::opposite_angle;
 use baby_shark::geometry::traits::RealNumber;
 use baby_shark::mesh::corner_table::table::CornerTable;
@@ -83,7 +83,10 @@ impl<TScalar: RealNumber + std::convert::From<i8>> Laplacian for CornerTable<TSc
     }
 }
 
-impl Laplacian for HalfEdgeMesh {
+impl<Topology> Laplacian for AbstractMesh<Topology>
+where
+    Topology: LoxMesh + BasicAdj + EdgeAdj + FullAdj,
+{
     type ScalarType = f64;
 
     fn laplace_matrix(&self) -> HashMap<(usize, usize), Self::ScalarType> {
