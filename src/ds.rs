@@ -31,12 +31,6 @@ pub type HalfEdgeMesh = AbstractMesh<TopologicalHalfEdgeMesh>;
 pub type DirectedEdgeMesh = AbstractMesh<TopologicalDirectedEdgeMesh>;
 pub type SharedVertexMesh = AbstractMesh<TopologicalSharedVertexMesh>;
 
-// // TODO: can be made much more general
-// pub struct HalfEdgeMesh {
-//     pub topology: TopologicalHalfEdgeMesh,
-//     pub vertex_positions: DenseMap<VertexHandle, [f64; 3]>,
-// }
-
 pub trait VertexPos {
     fn face_polygon(&self, face: FaceHandle) -> Triangle3<f64>;
 }

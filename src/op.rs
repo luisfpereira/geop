@@ -28,8 +28,6 @@ impl<TScalar: RealNumber + std::convert::From<i8>> Laplacian for CornerTable<TSc
             let mut outer_sum = Into::<Self::ScalarType>::into(0);
 
             self.edges_around_vertex(&vertex, |edge| {
-                // TODO: take advantage of symmetry?
-
                 let (v1_, v2_) = self.edge_vertices(edge);
 
                 let v2 = if v1_ == v1 { v2_ } else { v1_ };
