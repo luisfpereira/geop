@@ -6,7 +6,7 @@ use std::time::Instant;
 use baby_shark::mesh::corner_table::table::CornerTable;
 use geop::ds::SharedVertexMeshData;
 use geop::io::OffReader;
-use geop::operator::Laplacian;
+use geop::op::Laplacian;
 
 fn main() {
     println!("Running...");

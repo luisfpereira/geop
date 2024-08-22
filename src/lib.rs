@@ -2,5 +2,5 @@
 
 pub mod ds;
 pub mod io;
-pub mod operator;
+pub mod op;
 pub mod utils;

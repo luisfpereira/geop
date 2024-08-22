@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use geop::ds::{HalfEdgeMesh, SharedVertexMeshData};
 use geop::io::OffReader;
-use geop::operator::Laplacian;
+use geop::op::Laplacian;
 
 fn main() {
     println!("Running...");
