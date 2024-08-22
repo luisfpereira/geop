@@ -44,32 +44,44 @@ impl HalfEdgeMesh {
     }
 }
 
-impl<ScalarType: RealNumber> From<SharedVertexMeshData<ScalarType>> for CornerTable<ScalarType> {
-    fn from(mesh: SharedVertexMeshData<ScalarType>) -> CornerTable<ScalarType> {
-        let new_vertices: Vec<Vector3<ScalarType>> = mesh
-            .vertices
+pub trait FromSharedVertex {
+    type TMesh;
+    type ScalarType;
+
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh;
+}
+
+impl<TScalar: RealNumber> FromSharedVertex for CornerTable<TScalar> {
+    type ScalarType = TScalar;
+    type TMesh = CornerTable<TScalar>;
+
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh {
+        let new_vertices: Vec<Vector3<Self::ScalarType>> = vertices
             .array_chunks::<3>()
             .map(|&pos| Vector3::new(pos[0], pos[1], pos[2]))
             .collect();
 
-        CornerTable::<ScalarType>::from_vertices_and_indices(&new_vertices, &mesh.faces)
+        CornerTable::<Self::ScalarType>::from_vertices_and_indices(&new_vertices, faces)
     }
 }
 
-impl From<SharedVertexMeshData<f64>> for HalfEdgeMesh {
-    fn from(mesh: SharedVertexMeshData<f64>) -> HalfEdgeMesh {
+impl FromSharedVertex for HalfEdgeMesh {
+    type ScalarType = f64;
+    type TMesh = HalfEdgeMesh;
+
+    fn from_vertices_and_faces(vertices: &[Self::ScalarType], faces: &[usize]) -> Self::TMesh {
         let mut top_mesh = <TopologicalHalfEdgeMesh>::empty();
 
         let mut vertex_positions = DenseMap::new();
-        let mut vertices = Vec::new();
-        mesh.vertices.array_chunks::<3>().for_each(|vertex| {
+        let mut vertices_ = Vec::new();
+        vertices.array_chunks::<3>().for_each(|vertex| {
             let vertex_handle = top_mesh.add_vertex();
-            vertices.push(vertex_handle);
+            vertices_.push(vertex_handle);
             vertex_positions.insert(vertex_handle, *vertex);
         });
 
-        mesh.faces.array_chunks::<3>().for_each(|pos| {
-            top_mesh.add_triangle([vertices[pos[0]], vertices[pos[1]], vertices[pos[2]]]);
+        faces.array_chunks::<3>().for_each(|pos| {
+            top_mesh.add_triangle([vertices_[pos[0]], vertices_[pos[1]], vertices_[pos[2]]]);
         });
 
         HalfEdgeMesh {
@@ -78,6 +90,28 @@ impl From<SharedVertexMeshData<f64>> for HalfEdgeMesh {
         }
     }
 }
+
+impl From<SharedVertexMeshData<f64>> for HalfEdgeMesh {
+    fn from(mesh: SharedVertexMeshData<f64>) -> Self {
+        Self::from_vertices_and_faces(&mesh.vertices, &mesh.faces)
+    }
+}
+
+impl<ScalarType: RealNumber> From<SharedVertexMeshData<ScalarType>> for CornerTable<ScalarType> {
+    fn from(mesh: SharedVertexMeshData<ScalarType>) -> Self {
+        Self::from_vertices_and_faces(&mesh.vertices, &mesh.faces)
+    }
+}
+
+// // TODO: find a way to make this work
+// impl<TMesh> From<SharedVertexMeshData<f64>> for TMesh
+// where
+//     TMesh: FromSharedVertex<TMesh = TMesh, ScalarType = f64>,
+// {
+//     fn from(mesh: SharedVertexMeshData<f64>) -> Self {
+//         Self::from_vertices_and_faces(&mesh.vertices, &mesh.faces)
+//     }
+// }
 
 // TODO: can be made much more general
 impl From<SharedVertexMeshData<f64>> for TopologicalHalfEdgeMesh {
