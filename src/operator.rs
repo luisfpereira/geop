@@ -1,10 +1,13 @@
+use crate::ds::HalfEdgeMesh;
+use crate::utils::opposite_angle;
 use baby_shark::geometry::traits::RealNumber;
 use baby_shark::mesh::corner_table::table::CornerTable;
-use baby_shark::mesh::traits::{Mesh, TopologicalMesh};
+use baby_shark::mesh::traits::{Mesh as BabyMesh, TopologicalMesh as BabyTopologicalMesh};
+use lox::core::{BasicAdj, EdgeAdj, FullAdj, Mesh as LoxMesh};
+use lox::Handle;
+use nalgebra::Vector3;
 use num_traits::Float;
 use std::collections::HashMap;
-
-use crate::utils::opposite_angle;
 
 pub trait Laplacian {
     type ScalarType: RealNumber;
@@ -77,5 +80,62 @@ impl<TScalar: RealNumber + std::convert::From<i8>> Laplacian for CornerTable<TSc
             areas.push(area / Into::<Self::ScalarType>::into(3))
         }
         areas
+    }
+}
+
+impl Laplacian for HalfEdgeMesh {
+    type ScalarType = f64;
+
+    fn laplace_matrix(&self) -> HashMap<(usize, usize), Self::ScalarType> {
+        let top = &self.topology;
+
+        let mut sums = HashMap::new();
+
+        top.vertices().for_each(|v1| {
+            let mut outer_sum = 0.;
+            top.vertices_around_vertex(v1.handle()).for_each(|v2| {
+                let mut inner_sum = 0.;
+                let edge = top.edge_between_vertices(v1.handle(), v2).unwrap();
+                top.faces_of_edge(edge).iter().for_each(|&face| {
+                    let v3 = top
+                        .vertices_around_face(face)
+                        .filter(|&v3| v3 != v1.handle() && v3 != v2)
+                        .last()
+                        .unwrap();
+
+                    // TODO: improve here
+                    let p1 = Vector3::from(self.vertex_positions[v1.handle()]);
+                    let p2 = Vector3::from(self.vertex_positions[v2]);
+                    let p3 = Vector3::from(self.vertex_positions[v3]);
+
+                    let cotan_angle = 1. / opposite_angle(&p1, &p2, &p3).tan();
+
+                    inner_sum += cotan_angle;
+                });
+                inner_sum /= 2.;
+                sums.insert((v1.handle().to_usize(), v2.to_usize()), inner_sum);
+
+                outer_sum += inner_sum;
+            });
+            sums.insert((v1.handle().to_usize(), v1.handle().to_usize()), -outer_sum);
+        });
+
+        sums
+    }
+
+    fn mass_matrix(&self) -> Vec<Self::ScalarType> {
+        let top = &self.topology;
+
+        top.vertices()
+            .map(|vertex| {
+                let mut area: f64 = top
+                    .faces_around_vertex(vertex.handle())
+                    .map(|face| self.face_polygon(face).get_area())
+                    .sum();
+                area /= 3.;
+
+                area
+            })
+            .collect()
     }
 }

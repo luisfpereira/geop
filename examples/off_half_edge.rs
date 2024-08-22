@@ -3,8 +3,7 @@
 extern crate geop;
 use std::time::Instant;
 
-use baby_shark::mesh::corner_table::table::CornerTable;
-use geop::ds::SharedVertexMesh;
+use geop::ds::{HalfEdgeMesh, SharedVertexMeshData};
 use geop::io::OffReader;
 use geop::operator::Laplacian;
 
@@ -21,7 +20,7 @@ fn main() {
 
     let now = Instant::now();
 
-    let mesh = CornerTable::from(SharedVertexMesh { vertices, faces });
+    let mesh = HalfEdgeMesh::from(SharedVertexMeshData { vertices, faces });
 
     let laplace_dict = mesh.laplace_matrix();
     let areas = mesh.mass_matrix();

@@ -10,6 +10,7 @@ baby_shark = { git = "https://github.com/dima634/baby_shark.git" }
 off-rs = "1.0.0"
 nalgebra = "0.32.3"
 num-traits = "0.2.19"
+lox = "0.1.1"
 
 [toolchain]
 channel = "nightly"
